@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+enum UserRole {
+  ATTENDEE
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ATTENDEE)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  events       Event[]
+  registrations Registration[]
+  payments     Payment[]
+  waitlistEntries WaitlistEntry[]
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  description String
+  location    String
+  startTime   DateTime
+  endTime     DateTime
+
+  capacity    Int
+  availableSeats Int
+
+  status      EventStatus @default(DRAFT)
+
+  organizerId String
+  organizer   User        @relation(fields: [organizerId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations Registration[]
+  waitlistEntries WaitlistEntry[]
+}
+
+model Registration {
+  id        String @id @default(uuid())
+
+  userId    String
+  eventId   String
+
+  status    RegistrationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User  @relation(fields: [userId], references: [id])
+  event     Event @relation(fields: [eventId], references: [id])
+
+  payment   Payment?
+  refund    Refund?
+
+  @@unique([userId, eventId])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+
+  userId            String
+  registrationId    String        @unique
+
+  amount            Decimal
+  status            PaymentStatus @default(PENDING)
+
+  gatewayPaymentId  String?       @unique
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user              User          @relation(fields: [userId], references: [id])
+  registration      Registration  @relation(fields: [registrationId], references: [id])
+}
+
+model Refund {
+  id             String       @id @default(uuid())
+
+  registrationId String       @unique
+
+  amount         Decimal
+  status         RefundStatus @default(PENDING)
+
+  createdAt      DateTime     @default(now())
+  processedAt    DateTime?
+
+  registration   Registration @relation(fields: [registrationId], references: [id])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(uuid())
+
+  userId    String
+  eventId   String
+
+  position  Int
+  claimedAt DateTime?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user      User  @relation(fields: [userId], references: [id])
+  event     Event @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+  @@unique([eventId, position])
+}
