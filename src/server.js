@@ -1,7 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 
-// Load .env from the parent directory since server.js is in src/ and .env is in backend/
 dotenv.config({ path: '../.env' });
 
 const app = express();
@@ -13,6 +12,8 @@ app.get("/", (req, res) => {
         message: "EventOps API is running"
     });
 });
+
+
 
 const PORT = process.env.PORT || 5000;
 
