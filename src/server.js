@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-
+import authRoutes from ("./routes/authRoutes");
 dotenv.config({ path: '../.env' });
 
 const app = express();
@@ -13,6 +13,10 @@ app.get("/", (req, res) => {
         message: "EventOps API is running"
     });
 });
+
+
+
+app.use("/api/auth", authRoutes);
 
 
 
