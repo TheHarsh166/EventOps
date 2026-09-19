@@ -122,7 +122,136 @@ const login = async (req, res) => {
     }
 };
 
+
+const refreshAccessToken = async (req, res) => {
+    try {
+        // 1. Get refresh token from cookie
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            return res.status(401).json({
+                message: "Refresh token missing"
+            });
+        }
+
+        // 2. Verify JWT
+        const decoded = jwt.verify(
+            refreshToken,
+            process.env.JWT_REFRESH_SECRET
+        );
+
+        // 3. Find user's refresh tokens
+        const tokens = await prisma.refreshToken.findMany({
+            where: {
+                userId: decoded.userId
+            }
+        });
+
+        // 4. Find matching token
+        let validToken = null;
+
+        for (const token of tokens) {
+            const match = await bcrypt.compare(
+                refreshToken,
+                token.tokenHash
+            );
+
+            if (match) {
+                validToken = token;
+                break;
+            }
+        }
+
+        if (!validToken) {
+            return res.status(401).json({
+                message: "Invalid refresh token"
+            });
+        }
+
+        // 5. Find user
+        const user = await prisma.user.findUnique({
+            where: {
+                id: decoded.userId
+            }
+        });
+
+        if (!user) {
+            return res.status(401).json({
+                message: "User not found"
+            });
+        }
+
+        // 6. Generate new access token
+        const newAccessToken = generateAccessToken(user);
+
+        res.json({
+            accessToken: newAccessToken
+        });
+
+    } catch (error) {
+        return res.status(401).json({
+            message: "Invalid or expired refresh token"
+        });
+    }
+};
+
+
+const logout = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (refreshToken) {
+            try {
+                const decoded = jwt.verify(
+                    refreshToken,
+                    process.env.JWT_REFRESH_SECRET
+                );
+
+                const tokens = await prisma.refreshToken.findMany({
+                    where: {
+                        userId: decoded.userId
+                    }
+                });
+
+                for (const token of tokens) {
+                    const match = await bcrypt.compare(
+                        refreshToken,
+                        token.tokenHash
+                    );
+
+                    if (match) {
+                        await prisma.refreshToken.delete({
+                            where: {
+                                id: token.id
+                            }
+                        });
+
+                        break;
+                    }
+                }
+
+            } catch (error) {
+                // Token is already invalid/expired.
+                // We still clear the cookie.
+            }
+        }
+
+        res.clearCookie("refreshToken");
+
+        res.json({
+            message: "Logged out successfully"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
 export {
     register,
-    login
+    login,
+    refreshAccessToken,
+    logout
 };
