@@ -88,6 +88,8 @@ model Event {
   capacity    Int
   availableSeats Int
 
+  approvalRequired     Boolean     @default(false)
+  overbookingBuffer    Int         @default(0)
   status      EventStatus @default(DRAFT)
 
   organizerId String
