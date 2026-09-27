@@ -120,6 +120,8 @@ model Registration {
   refund    Refund?
 
   @@unique([userId, eventId])
+  @@index([eventId])
+@@index([userId])
 }
 
 model Payment {
