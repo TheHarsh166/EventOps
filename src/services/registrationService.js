@@ -87,3 +87,238 @@ export const createRegistration = async (userId, eventId) => {
     }
   );
 };
+
+export const getMyRegistrations = async (userId) => {
+
+  return await prisma.registration.findMany({
+    where: {
+      userId
+    },
+
+    include: {
+      event: {
+        select: {
+          id: true,
+          title: true,
+          startDate: true,
+          endDate: true,
+          location: true,
+          status: true
+        }
+      }
+    },
+
+    orderBy: {
+      registeredAt: "desc"
+    }
+  });
+};
+
+export const cancelRegistration = async (
+  registrationId,
+  userId
+) => {
+
+  return await prisma.$transaction(async (tx) => {
+
+    const registration =
+      await tx.registration.findUnique({
+        where: {
+          id: registrationId
+        }
+      });
+
+    if (!registration) {
+      throw new Error("Registration not found");
+    }
+
+    // Resource-level authorization
+    if (registration.userId !== userId) {
+      throw new Error(
+        "You are not allowed to cancel this registration"
+      );
+    }
+
+    if (
+      registration.status === "CANCELLED" ||
+      registration.status === "REJECTED"
+    ) {
+      throw new Error(
+        "Registration is already inactive"
+      );
+    }
+
+    const updatedRegistration =
+      await tx.registration.update({
+        where: {
+          id: registrationId
+        },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date()
+        }
+      });
+
+    await tx.event.update({
+      where: {
+        id: registration.eventId
+      },
+      data: {
+        seatsLeft: {
+          increment: 1
+        }
+      }
+    });
+
+    return updatedRegistration;
+  });
+};
+
+export const getEventRegistrations = async (
+  eventId,
+  organizerId
+) => {
+
+  const event = await prisma.event.findUnique({
+    where: {
+      id: eventId
+    }
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  if (event.organizerId !== organizerId) {
+    throw new Error(
+      "You are not allowed to view registrations for this event"
+    );
+  }
+
+  return await prisma.registration.findMany({
+    where: {
+      eventId
+    },
+
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
+    },
+
+    orderBy: {
+      registeredAt: "asc"
+    }
+  });
+};
+
+export const approveRegistration = async (
+  registrationId,
+  organizerId
+) => {
+
+  return await prisma.$transaction(async (tx) => {
+
+    const registration =
+      await tx.registration.findUnique({
+        where: {
+          id: registrationId
+        },
+        include: {
+          event: true
+        }
+      });
+
+    if (!registration) {
+      throw new Error("Registration not found");
+    }
+
+    if (
+      registration.event.organizerId !== organizerId
+    ) {
+      throw new Error(
+        "You are not allowed to approve this registration"
+      );
+    }
+
+    if (registration.status !== "PENDING") {
+      throw new Error(
+        "Only pending registrations can be approved"
+      );
+    }
+
+    return await tx.registration.update({
+      where: {
+        id: registrationId
+      },
+      data: {
+        status: "CONFIRMED"
+      }
+    });
+  });
+};
+
+export const rejectRegistration = async (
+  registrationId,
+  organizerId
+) => {
+
+  return await prisma.$transaction(async (tx) => {
+
+    const registration =
+      await tx.registration.findUnique({
+        where: {
+          id: registrationId
+        },
+        include: {
+          event: true
+        }
+      });
+
+    if (!registration) {
+      throw new Error("Registration not found");
+    }
+
+    if (
+      registration.event.organizerId !== organizerId
+    ) {
+      throw new Error(
+        "You are not allowed to reject this registration"
+      );
+    }
+
+    if (registration.status !== "PENDING") {
+      throw new Error(
+        "Only pending registrations can be rejected"
+      );
+    }
+
+    const updated =
+      await tx.registration.update({
+        where: {
+          id: registrationId
+        },
+        data: {
+          status: "REJECTED"
+        }
+      });
+
+    // Release the reserved seat
+    await tx.event.update({
+      where: {
+        id: registration.eventId
+      },
+      data: {
+        seatsLeft: {
+          increment: 1
+        }
+      }
+    });
+
+    return updated;
+  });
+};

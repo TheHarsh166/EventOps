@@ -30,3 +30,24 @@ export const registerForEvent = async (req, res) => {
     });
   }
 };
+
+export const getMyRegistrationsController = async (req, res) => {
+
+  try {
+
+    const registrations =
+      await getMyRegistrations(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      registrations
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
