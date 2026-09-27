@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import authRoutes from "./routes/authroutes.js";
 import cookieParser from "cookie-parser";
 import registrationRoutes from "./routes/registrationRoutes.js";
+import registrationRoutes from "./routes/registrationRoutes.js";
 dotenv.config({ path: '../.env' });
 
 const app = express();
@@ -22,6 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api",registrationRoutes);
+app.use("/api", registrationRoutes);
 
 
 const PORT = process.env.PORT || 5000;
