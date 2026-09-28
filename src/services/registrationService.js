@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import prisma from "../config/prisma.js";
 
 export const createRegistration = async (userId, eventId) => {
@@ -25,9 +24,9 @@ export const createRegistration = async (userId, eventId) => {
       const existingRegistration =
         await tx.registration.findUnique({
           where: {
-            eventId_userId: {
-              eventId,
-              userId
+            userId_eventId: {
+              userId,
+              eventId
             }
           }
         });
@@ -40,12 +39,12 @@ export const createRegistration = async (userId, eventId) => {
       const updatedEvent = await tx.event.updateMany({
         where: {
           id: eventId,
-          seatsLeft: {
+          availableSeats: {
             gt: 0
           }
         },
         data: {
-          seatsLeft: {
+          availableSeats: {
             decrement: 1
           }
         }
@@ -60,16 +59,12 @@ export const createRegistration = async (userId, eventId) => {
         ? "PENDING"
         : "CONFIRMED";
 
-      // 6. Generate ticket code
-      const ticketCode = crypto.randomUUID();
-
-      // 7. Create registration
+      // 6. Create registration
       const registration = await tx.registration.create({
         data: {
           eventId,
           userId,
-          status,
-          ticketCode
+          status
         },
         include: {
           event: true,
@@ -100,8 +95,8 @@ export const getMyRegistrations = async (userId) => {
         select: {
           id: true,
           title: true,
-          startDate: true,
-          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           status: true
         }
@@ -109,7 +104,7 @@ export const getMyRegistrations = async (userId) => {
     },
 
     orderBy: {
-      registeredAt: "desc"
+      createdAt: "desc"
     }
   });
 };
@@ -139,10 +134,7 @@ export const cancelRegistration = async (
       );
     }
 
-    if (
-      registration.status === "CANCELLED" ||
-      registration.status === "REJECTED"
-    ) {
+    if (registration.status === "CANCELLED") {
       throw new Error(
         "Registration is already inactive"
       );
@@ -154,8 +146,7 @@ export const cancelRegistration = async (
           id: registrationId
         },
         data: {
-          status: "CANCELLED",
-          cancelledAt: new Date()
+          status: "CANCELLED"
         }
       });
 
@@ -164,7 +155,7 @@ export const cancelRegistration = async (
         id: registration.eventId
       },
       data: {
-        seatsLeft: {
+        availableSeats: {
           increment: 1
         }
       }
@@ -211,7 +202,7 @@ export const getEventRegistrations = async (
     },
 
     orderBy: {
-      registeredAt: "asc"
+      createdAt: "asc"
     }
   });
 };
@@ -303,7 +294,7 @@ export const rejectRegistration = async (
           id: registrationId
         },
         data: {
-          status: "REJECTED"
+          status: "CANCELLED"
         }
       });
 
@@ -313,7 +304,7 @@ export const rejectRegistration = async (
         id: registration.eventId
       },
       data: {
-        seatsLeft: {
+        availableSeats: {
           increment: 1
         }
       }

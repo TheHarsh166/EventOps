@@ -9,7 +9,7 @@ import {
 } from "../controllers/registrationController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
-import roleMiddleware from "../middleware/roleMiddleware.js";
+import { authorizeRoles } from "../middleware/role.middleware.js";
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ const router = express.Router();
 router.post(
   "/events/:eventId/registrations",
   authMiddleware,
-  roleMiddleware("ATTENDEE"),
+  authorizeRoles("ATTENDEE"),
   registerForEvent
 );
 
@@ -31,7 +31,7 @@ router.post(
 router.get(
   "/registrations/me",
   authMiddleware,
-  roleMiddleware("ATTENDEE"),
+  authorizeRoles("ATTENDEE"),
   getMyRegistrationsController
 );
 
@@ -40,20 +40,20 @@ router.get(
 router.patch(
   "/registrations/:registrationId/cancel",
   authMiddleware,
-  roleMiddleware("ATTENDEE"),
+  authorizeRoles("ATTENDEE"),
   cancelRegistrationController
 );
 
 
 // ===============================
-// ORGANISER ROUTES
+// ORGANIZER ROUTES
 // ===============================
 
-// View registrations for organiser's event
+// View registrations for organizer's event
 router.get(
   "/events/:eventId/registrations",
   authMiddleware,
-  roleMiddleware("ORGANISER"),
+  authorizeRoles("ORGANIZER"),
   getEventRegistrationsController
 );
 
@@ -62,7 +62,7 @@ router.get(
 router.patch(
   "/registrations/:registrationId/approve",
   authMiddleware,
-  roleMiddleware("ORGANISER"),
+  authorizeRoles("ORGANIZER"),
   approveRegistrationController
 );
 

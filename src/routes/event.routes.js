@@ -9,10 +9,8 @@ import {
     cancelEvent
 } from "../controllers/event.controller.js";
 
-import { authenticate } from "../middleware/auth.middleware.js";
-
+import authMiddleware from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/role.middleware.js";
-
 import { canManageEvent } from "../middleware/eventAccess.middleware.js";
 
 const router = express.Router();
@@ -35,7 +33,7 @@ router.get(
 
 router.post(
     "/",
-    authenticate,
+    authMiddleware,
     authorizeRoles("ORGANIZER", "ADMIN"),
     createEvent
 );
@@ -45,7 +43,7 @@ router.post(
 
 router.patch(
     "/:eventId",
-    authenticate,
+    authMiddleware,
     authorizeRoles("ORGANIZER", "ADMIN"),
     canManageEvent,
     updateEvent
@@ -53,7 +51,7 @@ router.patch(
 
 router.post(
     "/:eventId/publish",
-    authenticate,
+    authMiddleware,
     authorizeRoles("ORGANIZER", "ADMIN"),
     canManageEvent,
     publishEvent
@@ -61,7 +59,7 @@ router.post(
 
 router.post(
     "/:eventId/cancel",
-    authenticate,
+    authMiddleware,
     authorizeRoles("ORGANIZER", "ADMIN"),
     canManageEvent,
     cancelEvent

@@ -87,21 +87,17 @@ export const createEventService = async ({
         data: {
             title: title.trim(),
 
-            description:
-                description?.trim() || null,
+            description: description?.trim() || "",
 
-            location:
-                location?.trim() || null,
+            location: location?.trim() || "",
 
             startTime: start,
 
             endTime: end,
 
-            registrationDeadline: deadline,
-
             capacity,
 
-            seatsLeft: capacity,
+            availableSeats: capacity,
 
             approvalRequired: Boolean(
                 approvalRequired
@@ -195,14 +191,14 @@ export const updateEventService = async ({
     if (data.description !== undefined) {
 
         updateData.description =
-            data.description?.trim() || null;
+            data.description?.trim() || "";
     }
 
 
     if (data.location !== undefined) {
 
         updateData.location =
-            data.location?.trim() || null;
+            data.location?.trim() || "";
     }
 
 
@@ -249,40 +245,6 @@ export const updateEventService = async ({
             throw new Error(
                 "Start time must be before end time"
             );
-        }
-    }
-
-
-    if (data.registrationDeadline !== undefined) {
-
-        if (data.registrationDeadline === null) {
-
-            updateData.registrationDeadline = null;
-
-        } else {
-
-            const deadline = new Date(
-                data.registrationDeadline
-            );
-
-            if (Number.isNaN(deadline.getTime())) {
-                throw new Error(
-                    "Invalid registration deadline"
-                );
-            }
-
-            const finalStart =
-                updateData.startTime ||
-                event.startTime;
-
-            if (deadline >= finalStart) {
-                throw new Error(
-                    "Registration deadline must be before event start"
-                );
-            }
-
-            updateData.registrationDeadline =
-                deadline;
         }
     }
 

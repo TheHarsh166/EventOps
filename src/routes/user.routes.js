@@ -4,9 +4,7 @@ import {
     updateUserRole
 } from "../controllers/user.controller.js";
 
-import {
-    authenticate
-} from "../middleware/auth.middleware.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 import {
     authorizeRoles
@@ -16,7 +14,7 @@ const router = express.Router();
 
 router.patch(
     "/:userId/role",
-    authenticate,
+    authMiddleware,
     authorizeRoles("ADMIN"),
     updateUserRole
 );

@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import prisma from "../config/prisma.js";
 
 const authMiddleware = async (req, res, next) => {
     try {
@@ -35,7 +36,7 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        req.user = decoded;
+        req.user = { ...user, userId: user.id };
 
         next();
 

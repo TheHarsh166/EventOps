@@ -1,7 +1,8 @@
 import express from "express";
 
 import {
-    register,
+    registerAttendee,
+    registerOrganizer,
     login,
     refreshAccessToken,
     logout
@@ -9,7 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/register", register);
+router.post("/register/attendee",registerAttendee);
+
+router.post("/register/organizer",registerOrganizer);
+
 router.post("/login", login);
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logout);

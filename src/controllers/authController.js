@@ -4,13 +4,24 @@ import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
 import prisma from "../config/prisma.js";
 
 
-const register = async (req, res) => {
+const registerAttendee = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                message: "Name, email and password are required"
+            });
+        }
+
+        // Normalize email
+        const normalizedEmail = email.trim().toLowerCase();
+
         // 1. Check whether user already exists
         const existingUser = await prisma.user.findUnique({
-            where: { email }
+            where: {
+                email: normalizedEmail
+            }
         });
 
         if (existingUser) {
@@ -20,30 +31,99 @@ const register = async (req, res) => {
         }
 
         // 2. Hash password
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await bcrypt.hash(
+            password,
+            10
+        );
 
-        // 3. Create user
+        // 3. Create ATTENDEE
         const user = await prisma.user.create({
             data: {
-                name,
-                email,
-                passwordHash
+                name: name.trim(),
+                email: normalizedEmail,
+                passwordHash,
+                role: "ATTENDEE"
             }
         });
 
-        res.status(201).json({
-            message: "User registered successfully",
+        return res.status(201).json({
+            message: "Attendee registered successfully",
+
             user: {
                 id: user.id,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         });
 
     } catch (error) {
         console.error(error);
 
-        res.status(500).json({
+        return res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+
+const registerOrganizer = async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                message: "Name, email and password are required"
+            });
+        }
+
+        // Normalize email
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // 1. Check whether user already exists
+        const existingUser = await prisma.user.findUnique({
+            where: {
+                email: normalizedEmail
+            }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                message: "User already exists"
+            });
+        }
+
+        // 2. Hash password
+        const passwordHash = await bcrypt.hash(
+            password,
+            10
+        );
+
+        // 3. Create ORGANIZER
+        const user = await prisma.user.create({
+            data: {
+                name: name.trim(),
+                email: normalizedEmail,
+                passwordHash,
+                role: "ORGANIZER"
+            }
+        });
+
+        return res.status(201).json({
+            message: "Organizer registered successfully",
+
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
             message: "Server error"
         });
     }
@@ -250,7 +330,8 @@ const logout = async (req, res) => {
 };
 
 export {
-    register,
+    registerAttendee,
+    registerOrganizer,
     login,
     refreshAccessToken,
     logout
