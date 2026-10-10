@@ -30,15 +30,19 @@ enum EventStatus {
 
 enum RegistrationStatus {
   PENDING
+  PAYMENT_PENDING
   CONFIRMED
+  REJECTED
   CANCELLED
   WAITLISTED
 }
 
 enum PaymentStatus {
   PENDING
-  SUCCESS
+  PROCESSING
+  SUCCEEDED
   FAILED
+  CANCELLED
   REFUNDED
 }
 
@@ -54,13 +58,12 @@ model User {
   email        String   @unique
   passwordHash String
   role         UserRole @default(ATTENDEE)
-
+phone          String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   events       Event[]
   registrations Registration[]
-  payments     Payment[]
   waitlistEntries WaitlistEntry[]
 
   refreshTokens  RefreshToken[]
@@ -125,21 +128,27 @@ model Registration {
 }
 
 model Payment {
-  id                String        @id @default(uuid())
+  id                  String        @id @default(cuid())
 
-  userId            String
-  registrationId    String        @unique
+  registrationId      String        @unique
 
-  amount            Decimal
-  status            PaymentStatus @default(PENDING)
+  amount              Int
+  currency            String        @default("inr")
 
-  gatewayPaymentId  String?       @unique
+  status              PaymentStatus @default(PENDING)
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+   payuTxnId      String        @unique
+  payuPaymentId  String?       @unique
 
-  user              User          @relation(fields: [userId], references: [id])
-  registration      Registration  @relation(fields: [registrationId], references: [id])
+  paidAt              DateTime?
+  failedAt            DateTime?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }
 
 model Refund {
