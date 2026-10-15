@@ -636,6 +636,7 @@ export const rejectRegistration = async (
 
 import prisma from "../config/prisma.js";
 import { promoteNextAttendee } from "./waitlistService.js";
+import { createNotification } from "./notificationService.js";
 
 // Create a registration, or add the attendee to the waitlist if full.
 export const createRegistration = async (userId, eventId) => {
@@ -888,14 +889,15 @@ export const getEventRegistrations = async (eventId, organizerId) => {
 };
 
 // Approve a pending registration.
-export const approveRegistration = async (
-  registrationId,
-  organizerId
-) => {
+export const approveRegistration = async (registrationId, organizerId) => {
   return prisma.$transaction(async (tx) => {
     const registration = await tx.registration.findUnique({
       where: { id: registrationId },
-      include: { event: true, payment: true }
+      include: {
+        event: true,
+        user: true,
+        payment: true
+      }
     });
 
     if (!registration) {
@@ -914,19 +916,19 @@ export const approveRegistration = async (
 
     if (
       registration.payment &&
-      ["PROCESSING", "SUCCEEDED"].includes(
-        registration.payment.status
-      )
+      ["PROCESSING", "SUCCEEDED"].includes(registration.payment.status)
     ) {
       throw new Error(
-        "Resolve the payment before approving this registration."
+        "Resolve the existing payment before approving this registration"
       );
     }
 
-    const nextStatus =
-      Number(registration.event?.price ?? 0) > 0
-        ? "PAYMENT_PENDING"
-        : "CONFIRMED";
+    // Paid registrations must complete payment before becoming confirmed.
+    const isPaidEvent = Number(registration.event?.price ?? 0) > 0;
+
+    const nextStatus = isPaidEvent
+      ? "PAYMENT_PENDING"
+      : "CONFIRMED";
 
     const updated = await tx.registration.updateMany({
       where: {
@@ -937,25 +939,44 @@ export const approveRegistration = async (
     });
 
     if (updated.count !== 1) {
-      throw new Error("Registration status changed. Try again.");
+      throw new Error(
+        "Registration status changed. Refresh and try again."
+      );
     }
 
+    await createNotification(tx, {
+      userId: registration.userId,
+      title: "Registration approved",
+      message: isPaidEvent
+        ? `Your registration for "${registration.event.title}" was approved. Complete payment to confirm your place.`
+        : `Your registration for "${registration.event.title}" was approved and confirmed.`,
+      type: "REGISTRATION_APPROVED"
+    });
+
     return tx.registration.findUnique({
-      where: { id: registrationId }
+      where: { id: registrationId },
+      include: {
+        event: true,
+        user: {
+          select: { id: true, name: true, email: true }
+        },
+        payment: true
+      }
     });
   });
 };
 
 // Reject a pending registration, release its reserved seat,
 // and automatically promote the next eligible attendee.
-export const rejectRegistration = async (
-  registrationId,
-  organizerId
-) => {
+export const rejectRegistration = async (registrationId, organizerId) => {
   return prisma.$transaction(async (tx) => {
     const registration = await tx.registration.findUnique({
       where: { id: registrationId },
-      include: { event: true, payment: true }
+      include: {
+        event: true,
+        user: true,
+        payment: true
+      }
     });
 
     if (!registration) {
@@ -974,12 +995,10 @@ export const rejectRegistration = async (
 
     if (
       registration.payment &&
-      ["PROCESSING", "SUCCEEDED"].includes(
-        registration.payment.status
-      )
+      ["PROCESSING", "SUCCEEDED"].includes(registration.payment.status)
     ) {
       throw new Error(
-        "Resolve the payment or refund before rejecting this registration."
+        "Cannot reject a registration with a processing or successful payment. Resolve the payment or refund first."
       );
     }
 
@@ -992,16 +1011,25 @@ export const rejectRegistration = async (
     });
 
     if (updated.count !== 1) {
-      throw new Error("Registration status changed. Try again.");
+      throw new Error(
+        "Registration status changed. Refresh and try again."
+      );
     }
 
-    // Release the seat.
+    // Release the reserved seat.
     await tx.event.update({
       where: { id: registration.eventId },
       data: { availableSeats: { increment: 1 } }
     });
 
-    // AUTOMATIC PROMOTION: same transaction as seat release.
+    await createNotification(tx, {
+      userId: registration.userId,
+      title: "Registration not approved",
+      message: `Your registration for "${registration.event.title}" was not approved.`,
+      type: "REGISTRATION_REJECTED"
+    });
+
+    // If someone is waiting, promote the next attendee into the released seat.
     const promoted = await promoteNextAttendee(
       tx,
       registration.eventId
@@ -1009,7 +1037,13 @@ export const rejectRegistration = async (
 
     return {
       registration: await tx.registration.findUnique({
-        where: { id: registrationId }
+        where: { id: registrationId },
+        include: {
+          event: true,
+          user: {
+            select: { id: true, name: true, email: true }
+          }
+        }
       }),
       promotedAttendee: promoted
     };

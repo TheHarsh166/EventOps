@@ -4,9 +4,13 @@ import {
   registerForEvent,
   getMyRegistrationsController,
   cancelRegistrationController,
-  getEventRegistrationsController,
-  approveRegistrationController
+  getEventRegistrationsController
 } from "../controllers/registrationController.js";
+
+import {
+  approveRegistrationController,
+  rejectRegistrationController
+} from "../controllers/registrationApprovalController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/role.middleware.js";
@@ -64,6 +68,14 @@ router.patch(
   authMiddleware,
   authorizeRoles("ORGANIZER"),
   approveRegistrationController
+);
+
+// Reject a pending registration
+router.patch(
+  "/registrations/:registrationId/reject",
+  authMiddleware,
+  authorizeRoles("ORGANIZER"),
+  rejectRegistrationController
 );
 
 

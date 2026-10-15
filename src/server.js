@@ -8,7 +8,8 @@ import registrationRoutes from "./routes/registrationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import refundRoutes from "./routes/refundRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js";
-
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -27,10 +28,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api", registrationRoutes);
-app.use( "/api",paymentRoutes);
+app.use("/api", paymentRoutes);
 app.use("/api", refundRoutes);
 app.use("/api", waitlistRoutes);
-
+app.use("/api/organizer/analytics", analyticsRoutes);
+app.use("/api/notifications", notificationRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
