@@ -6,13 +6,15 @@ import eventRoutes from "./routes/event.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-
+import refundRoutes from "./routes/refundRoutes.js";
+import waitlistRoutes from "./routes/waitlistRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.get("/", (req, res) => {
@@ -26,6 +28,8 @@ app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api", registrationRoutes);
 app.use( "/api",paymentRoutes);
+app.use("/api", refundRoutes);
+app.use("/api", waitlistRoutes);
 
 const PORT = process.env.PORT || 5000;
 

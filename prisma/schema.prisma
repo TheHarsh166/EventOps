@@ -9,10 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
 }
-
-
 
 enum UserRole {
   ATTENDEE
@@ -52,134 +50,157 @@ enum RefundStatus {
   FAILED
 }
 
+enum WaitlistStatus {
+  WAITING
+  PROMOTED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
   passwordHash String
   role         UserRole @default(ATTENDEE)
-phone          String?
+  phone        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  events       Event[]
-  registrations Registration[]
+  events          Event[]
+  registrations   Registration[]
   waitlistEntries WaitlistEntry[]
 
-  refreshTokens  RefreshToken[]
+  refreshTokens RefreshToken[]
+
+  notifications Notification[]
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   tokenHash String
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
 
 model Event {
-  id          String      @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String
   location    String
   startTime   DateTime
   endTime     DateTime
 
-  capacity    Int
+  capacity       Int
   availableSeats Int
 
-  approvalRequired     Boolean     @default(false)
-  overbookingBuffer    Int         @default(0)
-  status      EventStatus @default(DRAFT)
+  approvalRequired  Boolean     @default(false)
+  overbookingBuffer Int         @default(0)
+  status            EventStatus @default(DRAFT)
 
   organizerId String
-  organizer   User        @relation(fields: [organizerId], references: [id])
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  registrations Registration[]
-  waitlistEntries WaitlistEntry[]
-}
-
-model Registration {
-  id        String @id @default(uuid())
-
-  userId    String
-  eventId   String
-
-  status    RegistrationStatus @default(PENDING)
+  organizer   User   @relation(fields: [organizerId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User  @relation(fields: [userId], references: [id])
-  event     Event @relation(fields: [eventId], references: [id])
+  registrations   Registration[]
+  waitlistEntries WaitlistEntry[]
+}
 
-  payment   Payment?
-  refund    Refund?
+model Registration {
+  id      String @id @default(uuid())
+  userId  String
+  eventId String
+
+  status RegistrationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  payment Payment?
 
   @@unique([userId, eventId])
   @@index([eventId])
-@@index([userId])
+  @@index([userId])
 }
 
 model Payment {
-  id                  String        @id @default(cuid())
+  id String @id @default(cuid())
 
-  registrationId      String        @unique
+  registrationId String @unique
 
-  amount              Int
-  currency            String        @default("inr")
+  amount   Int
+  currency String @default("inr")
 
-  status              PaymentStatus @default(PENDING)
+  status PaymentStatus @default(PENDING)
 
-   payuTxnId      String        @unique
-  payuPaymentId  String?       @unique
+  payuTxnId     String  @unique
+  payuPaymentId String? @unique
 
-  paidAt              DateTime?
-  failedAt            DateTime?
+  paidAt   DateTime?
+  failedAt DateTime?
 
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  refunds Refund[]
 
   @@index([status])
 }
 
 model Refund {
-  id             String       @id @default(uuid())
-
-  registrationId String       @unique
-
-  amount         Decimal
+  id             String       @id @default(cuid())
+  paymentId      String
+  amount         Int
   status         RefundStatus @default(PENDING)
+  payuRefundId   String?      @unique
+  idempotencyKey String       @unique
+  reason         String?
 
-  createdAt      DateTime     @default(now())
-  processedAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  registration   Registration @relation(fields: [registrationId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, status])
 }
 
 model WaitlistEntry {
-  id        String   @id @default(uuid())
-
-  userId    String
-  eventId   String
-
-  position  Int
-  claimedAt DateTime?
-  expiresAt DateTime?
+  id      String         @id @default(cuid())
+  userId  String
+  eventId String
+  status  WaitlistStatus @default(WAITING)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User  @relation(fields: [userId], references: [id])
-  event     Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
-  @@unique([eventId, position])
+  @@index([eventId, status, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String    @default("GENERAL")
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
 }
