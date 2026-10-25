@@ -10,7 +10,14 @@ export function EventEditorPage() {
   const { eventId } = useParams();
   const isEditing = !!eventId;
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const toast = useToast();
+  const notify = (msg, type = "info") => {
+    if (typeof toast.showToast === "function") {
+      toast.showToast(msg, type);
+    } else if (typeof toast[type] === "function") {
+      toast[type](msg);
+    }
+  };
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +56,7 @@ export function EventEditorPage() {
             });
           }
         } catch (err) {
-          showToast(err.message || "Failed to load event details", "error");
+          notify(err.message || "Failed to load event details", "error");
           navigate("/organizer/events");
         } finally {
           setLoading(false);
@@ -57,7 +64,7 @@ export function EventEditorPage() {
       }
       loadEvent();
     }
-  }, [eventId, isEditing, navigate, showToast]);
+  }, [eventId, isEditing, navigate]);
 
   const validate = () => {
     const errs = {};
@@ -99,15 +106,15 @@ export function EventEditorPage() {
 
       if (isEditing) {
         await eventService.updateEvent(eventId, payload);
-        showToast("Event updated successfully", "success");
+        notify("Event updated successfully", "success");
       } else {
         await eventService.createEvent(payload);
-        showToast("Event created as DRAFT successfully", "success");
+        notify("Event created as DRAFT! Click 'Publish' in your list when ready.", "success");
       }
       navigate("/organizer/events");
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to save event";
-      showToast(msg, "error");
+      notify(msg, "error");
     } finally {
       setSubmitting(false);
     }

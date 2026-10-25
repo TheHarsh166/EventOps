@@ -261,7 +261,20 @@ export function EventDetailsPage() {
             )}
 
             {/* CTA Buttons */}
-            {isFull ? (
+            {user?.role === "ORGANIZER" || user?.role === "ADMIN" ? (
+              <div className="space-y-2">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 text-center">
+                  You are viewing this event as an <strong>{user.role}</strong>. Booking tickets is reserved for Attendee accounts.
+                </div>
+                {user.id === event.organizerId || user.role === "ADMIN" ? (
+                  <Link to={`/organizer/events/${event.id}/edit`} className="block">
+                    <Button variant="outline" className="w-full justify-center">
+                      Manage / Edit Event
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
+            ) : isFull ? (
               <Button
                 variant="outline"
                 className="w-full justify-center border-purple-600 text-purple-700 hover:bg-purple-50"

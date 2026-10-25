@@ -20,7 +20,13 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const showToast = useCallback((msg, type = "info") => {
+    addToast(msg, type);
+  }, [addToast]);
+
   const toast = {
+    showToast,
+    addToast,
     success: (msg) => addToast(msg, "success"),
     error: (msg) => addToast(msg, "error"),
     info: (msg) => addToast(msg, "info")
