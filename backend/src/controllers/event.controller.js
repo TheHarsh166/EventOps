@@ -2,6 +2,7 @@ import {
     createEventService,
     getPublishedEventsService,
     getMyEventsService,
+    getAllEventsAdminService,
     getEventByIdService,
     updateEventService,
     publishEventService,
@@ -38,6 +39,23 @@ export const getMyEvents = async (req, res) => {
         console.error(error);
         return res.status(500).json({
             message: "Internal server error"
+        });
+    }
+};
+
+export const getAllEventsAdmin = async (req, res) => {
+    try {
+        const { status, search, page, limit } = req.query;
+        const result = await getAllEventsAdminService({ status, search, page, limit });
+        return res.status(200).json({
+            success: true,
+            ...result
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch events"
         });
     }
 };

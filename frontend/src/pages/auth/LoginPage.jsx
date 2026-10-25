@@ -34,6 +34,8 @@ export function LoginPage() {
       toast.success(`Welcome back, ${res.user?.name || "Attendee"}!`);
       if (searchParams.get("redirect")) {
         navigate(searchParams.get("redirect"));
+      } else if (res.user?.role === "ADMIN") {
+        navigate("/admin");
       } else if (res.user?.role === "ORGANIZER") {
         navigate("/organizer");
       } else {

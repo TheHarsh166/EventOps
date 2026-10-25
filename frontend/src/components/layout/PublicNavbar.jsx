@@ -36,7 +36,7 @@ export function PublicNavbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <Link to={user?.role === "ORGANIZER" ? "/organizer" : "/app"}>
+                <Link to={user?.role === "ADMIN" ? "/admin" : user?.role === "ORGANIZER" ? "/organizer" : "/app"}>
                   <Button variant="primary" size="sm" className="gap-1.5">
                     <LayoutDashboard className="w-3.5 h-3.5" />
                     Dashboard

@@ -3,6 +3,7 @@ import express from "express";
 import {
     getEvents,
     getMyEvents,
+    getAllEventsAdmin,
     getEventById,
     createEvent,
     updateEvent,
@@ -22,6 +23,14 @@ const router = express.Router();
 router.get(
     "/",
     getEvents
+);
+
+// Admin-wide events list (Placed BEFORE /:eventId so it doesn't get treated as an ID)
+router.get(
+    "/admin/all",
+    authMiddleware,
+    authorizeRoles("ADMIN"),
+    getAllEventsAdmin
 );
 
 // Organizer's events (Placed BEFORE /:eventId so it doesn't get treated as an ID)

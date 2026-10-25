@@ -151,6 +151,53 @@ export const getMyEventsService = async (organizerId) => {
     });
 };
 
+export const getAllEventsAdminService = async ({ status, search, page = 1, limit = 20 }) => {
+    const where = {};
+    if (status) {
+        where.status = status;
+    }
+    if (search && search.trim().length > 0) {
+        where.OR = [
+            { title: { contains: search.trim(), mode: "insensitive" } },
+            { location: { contains: search.trim(), mode: "insensitive" } }
+        ];
+    }
+
+    const take = Math.max(1, Math.min(100, Number(limit) || 20));
+    const skip = (Math.max(1, Number(page) || 1) - 1) * take;
+
+    const [events, total] = await Promise.all([
+        prisma.event.findMany({
+            where,
+            include: {
+                organizer: {
+                    select: { id: true, name: true, email: true }
+                },
+                _count: {
+                    select: {
+                        registrations: true,
+                        waitlistEntries: true
+                    }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take
+        }),
+        prisma.event.count({ where })
+    ]);
+
+    return {
+        events,
+        pagination: {
+            total,
+            page: Number(page) || 1,
+            limit: take,
+            pages: Math.ceil(total / take)
+        }
+    };
+};
+
 
 export const getEventByIdService = async (
     eventId

@@ -97,3 +97,91 @@ export async function getOrganizerAnalytics(organizerId) {
     eventBreakdown
   };
 }
+
+/**
+ * Get system-wide platform analytics for administrators
+ */
+export async function getPlatformAdminAnalytics() {
+  const [
+    totalUsers,
+    totalAttendees,
+    totalOrganizers,
+    totalAdmins,
+    events,
+    payments,
+    refunds,
+    totalWaitlist
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { role: "ATTENDEE" } }),
+    prisma.user.count({ where: { role: "ORGANIZER" } }),
+    prisma.user.count({ where: { role: "ADMIN" } }),
+    prisma.event.findMany({
+      include: {
+        _count: {
+          select: {
+            registrations: true,
+            waitlistEntries: true
+          }
+        },
+        organizer: {
+          select: { id: true, name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.payment.findMany({
+      where: { status: "SUCCEEDED" }
+    }),
+    prisma.refund.findMany({
+      where: { status: "PROCESSED" }
+    }),
+    prisma.waitlistEntry.count({ where: { status: "WAITING" } })
+  ]);
+
+  let totalGrossPaise = 0;
+  payments.forEach((p) => {
+    totalGrossPaise += p.amount;
+  });
+
+  let totalRefundsPaise = 0;
+  refunds.forEach((r) => {
+    totalRefundsPaise += r.amount;
+  });
+
+  const totalRegistrations = events.reduce((sum, e) => sum + e._count.registrations, 0);
+  const publishedEvents = events.filter((e) => e.status === "PUBLISHED").length;
+  const draftEvents = events.filter((e) => e.status === "DRAFT").length;
+  const cancelledEvents = events.filter((e) => e.status === "CANCELLED").length;
+
+  return {
+    overview: {
+      totalUsers,
+      totalAttendees,
+      totalOrganizers,
+      totalAdmins,
+      totalEvents: events.length,
+      publishedEvents,
+      draftEvents,
+      cancelledEvents,
+      totalRegistrations,
+      totalWaitlist,
+      grossRevenue: totalGrossPaise / 100,
+      totalRefunds: totalRefundsPaise / 100,
+      netRevenue: (totalGrossPaise - totalRefundsPaise) / 100
+    },
+    events: events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      status: e.status,
+      capacity: e.capacity,
+      availableSeats: e.availableSeats,
+      approvalRequired: e.approvalRequired,
+      organizer: e.organizer,
+      registrationsCount: e._count.registrations,
+      waitlistCount: e._count.waitlistEntries,
+      startTime: e.startTime,
+      createdAt: e.createdAt
+    }))
+  };
+}

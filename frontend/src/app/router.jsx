@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { PublicLayout } from "../layouts/PublicLayout.jsx";
 import { AttendeeLayout } from "../layouts/AttendeeLayout.jsx";
 import { OrganizerLayout } from "../layouts/OrganizerLayout.jsx";
+import { AdminLayout } from "../layouts/AdminLayout.jsx";
 import { ProtectedRoute } from "../components/layout/ProtectedRoute.jsx";
 
 // Public Pages
@@ -26,6 +27,11 @@ import { EventEditorPage } from "../pages/organizer/EventEditorPage.jsx";
 import { OrganizerRegistrationsPage } from "../pages/organizer/OrganizerRegistrationsPage.jsx";
 import { OrganizerWaitlistPage } from "../pages/organizer/OrganizerWaitlistPage.jsx";
 import { OrganizerAnalyticsPage } from "../pages/organizer/OrganizerAnalyticsPage.jsx";
+
+// Admin Pages
+import { AdminOverview } from "../pages/admin/AdminOverview.jsx";
+import { AdminUsersPage } from "../pages/admin/AdminUsersPage.jsx";
+import { AdminEventsPage } from "../pages/admin/AdminEventsPage.jsx";
 
 export const router = createBrowserRouter([
   // Public Routes
@@ -136,6 +142,31 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <ProfilePage />
+          }
+        ]
+      }
+    ]
+  },
+
+  // Admin Protected Routes
+  {
+    path: "/admin",
+    element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
+    children: [
+      {
+        element: <AdminLayout />,
+        children: [
+          {
+            index: true,
+            element: <AdminOverview />
+          },
+          {
+            path: "users",
+            element: <AdminUsersPage />
+          },
+          {
+            path: "events",
+            element: <AdminEventsPage />
           }
         ]
       }

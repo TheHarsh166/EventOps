@@ -1,4 +1,7 @@
-import { getOrganizerAnalytics } from "../services/analyticsService.js";
+import {
+  getOrganizerAnalytics,
+  getPlatformAdminAnalytics
+} from "../services/analyticsService.js";
 
 export const getOrganizerAnalyticsController = async (req, res) => {
   try {
@@ -12,6 +15,22 @@ export const getOrganizerAnalyticsController = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch organizer analytics"
+    });
+  }
+};
+
+export const getPlatformAdminAnalyticsController = async (req, res) => {
+  try {
+    const analytics = await getPlatformAdminAnalytics();
+    return res.status(200).json({
+      success: true,
+      analytics
+    });
+  } catch (error) {
+    console.error("Platform analytics fetch error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch platform analytics"
     });
   }
 };

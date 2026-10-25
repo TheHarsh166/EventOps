@@ -1,7 +1,7 @@
 import express from "express";
-
 import {
-    updateUserRole
+    updateUserRole,
+    getAllUsers
 } from "../controllers/user.controller.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -24,6 +24,14 @@ router.get(
             return res.status(500).json({ message: "Server error" });
         }
     }
+);
+
+// Admin-only user list
+router.get(
+    "/",
+    authMiddleware,
+    authorizeRoles("ADMIN"),
+    getAllUsers
 );
 
 router.patch(

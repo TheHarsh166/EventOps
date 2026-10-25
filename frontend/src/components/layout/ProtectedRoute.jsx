@@ -23,6 +23,9 @@ export function ProtectedRoute({ allowedRoles = [] }) {
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     // Redirect user to their respective default home based on role
+    if (user?.role === "ADMIN") {
+      return <Navigate to="/admin" replace />;
+    }
     if (user?.role === "ORGANIZER") {
       return <Navigate to="/organizer" replace />;
     }
