@@ -14,6 +14,7 @@ export const createEventService = async ({
         endTime,
         registrationDeadline,
         capacity,
+        price = 0,
         approvalRequired = false,
         overbookingBuffer = 0
     } = data;
@@ -98,6 +99,8 @@ export const createEventService = async ({
             capacity,
 
             availableSeats: capacity,
+
+            price: Number(price) >= 0 ? Number(price) : 0,
 
             approvalRequired: Boolean(
                 approvalRequired
@@ -200,15 +203,29 @@ export const getAllEventsAdminService = async ({ status, search, page = 1, limit
 
 
 export const getEventByIdService = async (
-    eventId
+    eventId,
+    user = null
 ) => {
-
-    return await prisma.event.findFirst({
+    const event = await prisma.event.findUnique({
         where: {
-            id: eventId,
-            status: "PUBLISHED"
+            id: eventId
         }
     });
+
+    if (!event) {
+        return null;
+    }
+
+    if (event.status === "PUBLISHED") {
+        return event;
+    }
+
+    // If event is not published (e.g. DRAFT or CANCELLED), allow organizer or admin
+    if (user && (user.role === "ADMIN" || event.organizerId === user.id || event.organizerId === user.userId)) {
+        return event;
+    }
+
+    return null;
 };
 
 export const updateEventService = async ({
@@ -320,6 +337,18 @@ export const updateEventService = async ({
         }
     }
 
+
+    if (data.price !== undefined) {
+        const p = Number(data.price);
+        if (Number.isNaN(p) || p < 0) {
+            throw new Error("Price must be a valid non-negative number");
+        }
+        updateData.price = p;
+    }
+
+    if (data.approvalRequired !== undefined) {
+        updateData.approvalRequired = Boolean(data.approvalRequired);
+    }
 
     // Don't allow normal update to change these:
     //

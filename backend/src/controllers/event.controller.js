@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import {
     createEventService,
     getPublishedEventsService,
@@ -63,9 +64,20 @@ export const getAllEventsAdmin = async (req, res) => {
 
 export const getEventById = async (req, res) => {
     try {
+        let user = req.user || null;
+        if (!user && req.headers.authorization) {
+            try {
+                const token = req.headers.authorization.split(" ")[1];
+                const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+                user = { id: decoded.userId, userId: decoded.userId, role: decoded.role };
+            } catch {
+                // Ignore token error for public view
+            }
+        }
 
         const event = await getEventByIdService(
-            req.params.eventId
+            req.params.eventId,
+            user
         );
 
         if (!event) {

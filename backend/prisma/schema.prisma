@@ -96,6 +96,7 @@ model Event {
 
   capacity       Int
   availableSeats Int
+  price          Float       @default(0)
 
   approvalRequired  Boolean     @default(false)
   overbookingBuffer Int         @default(0)

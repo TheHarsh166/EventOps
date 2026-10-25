@@ -21,6 +21,8 @@ export function EventEditorPage() {
     startTime: "",
     endTime: "",
     capacity: 50,
+    price: 0,
+    isPaid: false,
     approvalRequired: false,
     overbookingBuffer: 0
   });
@@ -40,6 +42,8 @@ export function EventEditorPage() {
               startTime: evt.startTime ? new Date(evt.startTime).toISOString().slice(0, 16) : "",
               endTime: evt.endTime ? new Date(evt.endTime).toISOString().slice(0, 16) : "",
               capacity: evt.capacity || 50,
+              price: evt.price || 0,
+              isPaid: Number(evt.price ?? 0) > 0,
               approvalRequired: Boolean(evt.approvalRequired),
               overbookingBuffer: evt.overbookingBuffer || 0
             });
@@ -68,6 +72,9 @@ export function EventEditorPage() {
     if (!formData.capacity || Number(formData.capacity) <= 0) {
       errs.capacity = "Capacity must be a positive integer";
     }
+    if (formData.isPaid && (formData.price === "" || Number(formData.price) <= 0)) {
+      errs.price = "Paid events require a ticket price greater than 0";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -85,6 +92,7 @@ export function EventEditorPage() {
         startTime: new Date(formData.startTime).toISOString(),
         endTime: new Date(formData.endTime).toISOString(),
         capacity: Number(formData.capacity),
+        price: formData.isPaid ? Number(formData.price) : 0,
         approvalRequired: Boolean(formData.approvalRequired),
         overbookingBuffer: Number(formData.overbookingBuffer || 0)
       };
@@ -198,6 +206,7 @@ export function EventEditorPage() {
             value={formData.capacity}
             onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
             disabled={isEditing}
+            placeholder="e.g. 100"
           />
 
           <FormField
@@ -207,7 +216,63 @@ export function EventEditorPage() {
             value={formData.overbookingBuffer}
             onChange={(e) => setFormData({ ...formData, overbookingBuffer: e.target.value })}
             disabled={isEditing}
+            placeholder="e.g. 5"
           />
+        </div>
+
+        {/* Pricing / Payment Type */}
+        <div className="pt-2 border-t border-slate-100 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
+              Event Pricing Model
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isPaid: false, price: 0 })}
+                className={`py-3 px-4 rounded-xl border text-sm font-medium transition-all text-left flex flex-col justify-between ${
+                  !formData.isPaid
+                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20"
+                    : "border-slate-200 bg-white hover:border-slate-300 text-slate-700"
+                }`}
+              >
+                <span className="font-semibold text-sm">Free Admission</span>
+                <span className="text-xs text-slate-500 mt-1">Instant confirmation without payment checkout</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isPaid: true, price: formData.price > 0 ? formData.price : 499 })}
+                className={`py-3 px-4 rounded-xl border text-sm font-medium transition-all text-left flex flex-col justify-between ${
+                  formData.isPaid
+                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20"
+                    : "border-slate-200 bg-white hover:border-slate-300 text-slate-700"
+                }`}
+              >
+                <span className="font-semibold text-sm">Paid Event (PayU)</span>
+                <span className="text-xs text-slate-500 mt-1">Secure payment checkout via PayU Gateway</span>
+              </button>
+            </div>
+          </div>
+
+          {formData.isPaid && (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <FormField
+                label="Ticket Price (INR ₹)"
+                type="number"
+                min={1}
+                step="1"
+                required
+                error={errors.price}
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="e.g. 499"
+              />
+              <p className="text-xs text-slate-500">
+                Attendees will be redirected to the secure <strong>PayU Checkout Gateway</strong> to complete ticket purchases in ₹ INR.
+              </p>
+            </div>
+          )}
         </div>
 
         {isEditing && (

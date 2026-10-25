@@ -11,6 +11,7 @@ import {
   Share2
 } from "lucide-react";
 import { eventService } from "../../services/event.service.js";
+import { paymentService } from "../../services/payment.service.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { Button } from "../../components/common/Button.jsx";
@@ -60,6 +61,17 @@ export function EventDetailsPage() {
     setActionLoading(true);
     try {
       const res = await eventService.registerForEvent(eventId);
+      const reg = res.registration;
+
+      if (reg && reg.status === "PAYMENT_PENDING") {
+        toast.info("Registration reserved! Redirecting to PayU checkout...");
+        const paymentData = await paymentService.initiatePayment(reg.id);
+        if (paymentData.action && paymentData.fields) {
+          paymentService.submitPayUForm(paymentData.action, paymentData.fields);
+          return;
+        }
+      }
+
       toast.success(res.message || "Registration successful!");
       // Refresh event seat count
       const updated = await eventService.getEventById(eventId);
