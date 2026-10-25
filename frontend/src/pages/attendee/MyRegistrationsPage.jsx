@@ -7,7 +7,9 @@ import {
   Ban,
   Clock,
   ExternalLink,
-  RotateCcw
+  RotateCcw,
+  Users,
+  Calendar
 } from "lucide-react";
 import { registrationService } from "../../services/registration.service.js";
 import { paymentService } from "../../services/payment.service.js";
@@ -94,21 +96,47 @@ export function MyRegistrationsPage() {
     }
   };
 
+  const isPastEvent = (reg) => {
+    if (!reg.event?.endTime) return false;
+    return new Date(reg.event.endTime) < new Date();
+  };
+
   const filteredRegistrations = registrations.filter((reg) => {
     if (activeTab === "ALL") return true;
-    if (activeTab === "CONFIRMED") return reg.status === "CONFIRMED";
-    if (activeTab === "PENDING") return reg.status === "PENDING" || reg.status === "PAYMENT_PENDING";
-    if (activeTab === "WAITLISTED") return reg.status === "WAITLISTED";
-    if (activeTab === "CANCELLED") return reg.status === "CANCELLED" || reg.status === "REJECTED";
+    if (activeTab === "UPCOMING") {
+      return (
+        (reg.status === "CONFIRMED" || reg.status === "PENDING" || reg.status === "PAYMENT_PENDING") &&
+        !isPastEvent(reg)
+      );
+    }
+    if (activeTab === "CONFIRMED") return reg.status === "CONFIRMED" && !isPastEvent(reg);
+    if (activeTab === "PENDING") return (reg.status === "PENDING" || reg.status === "PAYMENT_PENDING") && !isPastEvent(reg);
+    if (activeTab === "WAITLISTED") return reg.status === "WAITLISTED" && !isPastEvent(reg);
+    if (activeTab === "PAST") {
+      return (
+        reg.status === "CANCELLED" ||
+        reg.status === "REJECTED" ||
+        isPastEvent(reg)
+      );
+    }
     return true;
   });
 
+  const activeRegistrationsCount = registrations.filter(
+    (r) => (r.status === "CONFIRMED" || r.status === "PENDING" || r.status === "PAYMENT_PENDING") && !isPastEvent(r)
+  ).length;
+
+  const pastAndCancelledCount = registrations.filter(
+    (r) => r.status === "CANCELLED" || r.status === "REJECTED" || isPastEvent(r)
+  ).length;
+
   const tabs = [
     { id: "ALL", label: "All", count: registrations.length },
-    { id: "CONFIRMED", label: "Confirmed", count: registrations.filter((r) => r.status === "CONFIRMED").length },
-    { id: "PENDING", label: "Pending", count: registrations.filter((r) => r.status === "PENDING" || r.status === "PAYMENT_PENDING").length },
-    { id: "WAITLISTED", label: "Waitlisted", count: registrations.filter((r) => r.status === "WAITLISTED").length },
-    { id: "CANCELLED", label: "Inactive", count: registrations.filter((r) => r.status === "CANCELLED" || r.status === "REJECTED").length }
+    { id: "UPCOMING", label: "Active", count: activeRegistrationsCount },
+    { id: "CONFIRMED", label: "Confirmed", count: registrations.filter((r) => r.status === "CONFIRMED" && !isPastEvent(r)).length },
+    { id: "PENDING", label: "Pending", count: registrations.filter((r) => (r.status === "PENDING" || r.status === "PAYMENT_PENDING") && !isPastEvent(r)).length },
+    { id: "WAITLISTED", label: "Waitlisted", count: registrations.filter((r) => r.status === "WAITLISTED" && !isPastEvent(r)).length },
+    { id: "PAST", label: "Past & Cancelled", count: pastAndCancelledCount }
   ];
 
   if (loading) {
@@ -184,6 +212,13 @@ export function MyRegistrationsPage() {
               reg.status === "WAITLISTED" ||
               reg.status === "PAYMENT_PENDING";
 
+            const registeredCount =
+              reg.event?._count?.registrations ??
+              (reg.event?.capacity != null && reg.event?.availableSeats != null
+                ? reg.event.capacity - reg.event.availableSeats
+                : null);
+            const isCompleted = isPastEvent(reg);
+
             return (
               <div
                 key={reg.id}
@@ -192,6 +227,15 @@ export function MyRegistrationsPage() {
                 <div className="space-y-2 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <StatusBadge status={reg.status} />
+                    {isCompleted ? (
+                      <span className="inline-flex items-center text-[11px] font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-200">
+                        Event Completed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-[11px] font-medium bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                        Upcoming Event
+                      </span>
+                    )}
                     {reg.payment && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                         <CreditCard className="w-3 h-3 text-slate-500" />
@@ -207,15 +251,41 @@ export function MyRegistrationsPage() {
                     <h3 className="text-lg font-semibold text-slate-900">
                       {reg.event?.title || "Event details unavailable"}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      📍 {reg.event?.location || "TBA"} • 📅{" "}
-                      {reg.event?.startTime
-                        ? new Date(reg.event.startTime).toLocaleString(undefined, {
-                            dateStyle: "medium",
-                            timeStyle: "short"
-                          })
-                        : "Date TBA"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+                      <span>📍 {reg.event?.location || "TBA"}</span>
+                      <span className="flex items-center gap-1 font-medium text-slate-700">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                        {reg.event?.startTime
+                          ? new Date(reg.event.startTime).toLocaleDateString(undefined, {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            })
+                          : "Date TBA"}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <Clock className="w-3.5 h-3.5" />
+                        {reg.event?.startTime
+                          ? new Date(reg.event.startTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })
+                          : ""}
+                        {reg.event?.endTime
+                          ? ` - ${new Date(reg.event.endTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}`
+                          : ""}
+                      </span>
+                      {registeredCount !== null && (
+                        <span className="flex items-center gap-1 text-indigo-600 font-semibold bg-indigo-50/70 px-2 py-0.5 rounded-md border border-indigo-100">
+                          <Users className="w-3.5 h-3.5" />
+                          {registeredCount} Registered Attendees
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {reg.status === "PAYMENT_PENDING" && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Ticket, ArrowRight, Clock, AlertCircle } from "lucide-react";
+import { Calendar, Ticket, ArrowRight, Clock, AlertCircle, Users } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { registrationService } from "../../services/registration.service.js";
 import { eventService } from "../../services/event.service.js";
@@ -105,24 +105,37 @@ export function AttendeeDashboard() {
       )}
 
       {/* Quick Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
         <StatCard
-          title="Total Registrations"
-          value={registrations.length}
-          subtitle="All-time registrations"
-          icon={Ticket}
-        />
-        <StatCard
-          title="Active Events"
+          title="Active Bookings"
           value={upcomingRegistrations.length}
-          subtitle="Confirmed or pending events"
-          icon={Calendar}
+          subtitle="Confirmed or pending"
+          icon={Ticket}
         />
         <StatCard
           title="Waitlisted"
           value={registrations.filter((r) => r.status === "WAITLISTED").length}
-          subtitle="Awaiting seats"
+          subtitle="In queue for seats"
           icon={Clock}
+        />
+        <StatCard
+          title="Past & Cancelled"
+          value={
+            registrations.filter(
+              (r) =>
+                r.status === "CANCELLED" ||
+                r.status === "REJECTED" ||
+                (r.event?.endTime && new Date(r.event.endTime) < new Date())
+            ).length
+          }
+          subtitle="Completed or cancelled"
+          icon={Calendar}
+        />
+        <StatCard
+          title="Total History"
+          value={registrations.length}
+          subtitle="All-time transactions"
+          icon={Ticket}
         />
       </div>
 
@@ -148,53 +161,106 @@ export function AttendeeDashboard() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {upcomingRegistrations.slice(0, 3).map((reg) => (
-              <div
-                key={reg.id}
-                className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <StatusBadge status={reg.status} />
-                    <span className="text-xs text-slate-400">
-                      {new Date(reg.createdAt).toLocaleDateString()}
-                    </span>
+            {upcomingRegistrations.slice(0, 6).map((reg) => {
+              const registeredCount =
+                reg.event?._count?.registrations ??
+                (reg.event?.capacity != null && reg.event?.availableSeats != null
+                  ? reg.event.capacity - reg.event.availableSeats
+                  : null);
+              const isEventCompleted = reg.event?.endTime && new Date(reg.event.endTime) < new Date();
+
+              return (
+                <div
+                  key={reg.id}
+                  className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all space-y-4"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={reg.status} />
+                        {isEventCompleted ? (
+                          <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                            Completed
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                            Upcoming
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        Booked {new Date(reg.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <h3 className="font-semibold text-slate-900 line-clamp-1 text-base">
+                      {reg.event?.title || "Event"}
+                    </h3>
+
+                    <div className="mt-2.5 space-y-1.5 text-xs text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <span>📍</span>
+                        <span className="line-clamp-1">{reg.event?.location || "Online"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                        <span>📅</span>
+                        <span>
+                          {reg.event?.startTime
+                            ? new Date(reg.event.startTime).toLocaleDateString(undefined, {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric"
+                              })
+                            : "Date TBA"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <span>⏰</span>
+                        <span>
+                          {reg.event?.startTime
+                            ? new Date(reg.event.startTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })
+                            : ""}
+                          {reg.event?.endTime
+                            ? ` - ${new Date(reg.event.endTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}`
+                            : ""}
+                        </span>
+                      </div>
+
+                      {registeredCount !== null && (
+                        <div className="flex items-center gap-1.5 text-indigo-600 font-medium pt-1">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>{registeredCount} Registered Attendees</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-slate-900 line-clamp-1">
-                    {reg.event?.title || "Event"}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-                    📍 {reg.event?.location || "TBA"}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    📅{" "}
-                    {reg.event?.startTime
-                      ? new Date(reg.event.startTime).toLocaleDateString(undefined, {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit"
-                        })
-                      : "Schedule TBA"}
-                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <Link
+                      to={`/events/${reg.eventId}`}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                    >
+                      Event Details →
+                    </Link>
+                    <Link
+                      to="/app/registrations"
+                      className="text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
+                    >
+                      Manage
+                    </Link>
+                  </div>
                 </div>
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <Link
-                    to={`/events/${reg.eventId}`}
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                  >
-                    Event Details →
-                  </Link>
-                  <Link
-                    to="/app/registrations"
-                    className="text-xs font-medium text-slate-600 hover:text-slate-900"
-                  >
-                    Manage
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

@@ -91,6 +91,7 @@ export const getMyRegistrations = async (userId) => {
     },
 
     include: {
+      payment: true,
       event: {
         select: {
           id: true,
@@ -98,7 +99,21 @@ export const getMyRegistrations = async (userId) => {
           startTime: true,
           endTime: true,
           location: true,
-          status: true
+          status: true,
+          capacity: true,
+          availableSeats: true,
+          price: true,
+          _count: {
+            select: {
+              registrations: {
+                where: {
+                  status: {
+                    in: ["CONFIRMED", "PENDING", "PAYMENT_PENDING"]
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -449,15 +464,6 @@ export const cancelRegistration = async (registrationId, userId) => {
 
     const payment = registration.payment;
 
-    if (
-      payment &&
-      ["PROCESSING"].includes(payment.status)
-    ) {
-      throw new Error(
-        "Payment is processing. Please wait for the payment result before cancelling."
-      );
-    }
-
     if (payment && payment.status === "SUCCEEDED") {
       throw new Error(
         "This registration has been paid for. Use the refund workflow to cancel it."
@@ -738,6 +744,7 @@ export const getMyRegistrations = async (userId) => {
   return prisma.registration.findMany({
     where: { userId },
     include: {
+      payment: true,
       event: {
         select: {
           id: true,
@@ -745,7 +752,21 @@ export const getMyRegistrations = async (userId) => {
           startTime: true,
           endTime: true,
           location: true,
-          status: true
+          status: true,
+          capacity: true,
+          availableSeats: true,
+          price: true,
+          _count: {
+            select: {
+              registrations: {
+                where: {
+                  status: {
+                    in: ["CONFIRMED", "PENDING", "PAYMENT_PENDING"]
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -800,12 +821,6 @@ export const cancelRegistration = async (registrationId, userId) => {
     }
 
     const payment = registration.payment;
-
-    if (payment && payment.status === "PROCESSING") {
-      throw new Error(
-        "Payment is processing. Wait for the payment result before cancelling."
-      );
-    }
 
     if (payment && payment.status === "SUCCEEDED") {
       throw new Error(

@@ -140,28 +140,19 @@ const createPaymentRequest = async (
     let payment =
         registration.payment;
 
+    const newTxnId = generateTxnId();
 
     if (!payment) {
-
-        const txnId =
-            generateTxnId();
-
-
         payment =
             await prisma.payment.create({
-
                 data: {
-
                     registrationId:
                         registration.id,
 
                     /*
                     Store amount in paise.
-
-                    Example:
-                    ₹999 = 99900 paise
+                    Example: ₹999 = 99900 paise
                     */
-
                     amount:
                         Math.round(
                             registration.event.price * 100
@@ -174,9 +165,18 @@ const createPaymentRequest = async (
                         "PENDING",
 
                     payuTxnId:
-                        txnId
+                        newTxnId
                 }
             });
+    } else {
+        // If an existing payment was already created, generate a new transaction ID so PayU doesn't reject duplicate txnId
+        payment = await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+                payuTxnId: newTxnId,
+                status: "PENDING"
+            }
+        });
     }
 
 
