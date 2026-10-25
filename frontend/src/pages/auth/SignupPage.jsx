@@ -49,7 +49,7 @@ export function SignupPage() {
       toast.success("Account created successfully! Logging you in...");
       // Auto-login newly registered user
       await login(email, password);
-      navigate("/");
+      navigate(role === "ORGANIZER" ? "/organizer" : "/app");
     } catch (err) {
       const msg = getErrorMessage(err, "Registration failed");
       setError(msg);

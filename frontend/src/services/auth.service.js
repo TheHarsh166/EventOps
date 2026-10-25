@@ -38,6 +38,14 @@ export const authService = {
     }
   },
 
+  async getCurrentUser() {
+    const response = await api.get("/users/me");
+    if (response.data?.user) {
+      localStorage.setItem("eventops_user", JSON.stringify(response.data.user));
+    }
+    return response.data?.user;
+  },
+
   getStoredToken() {
     return localStorage.getItem("eventops_token");
   }

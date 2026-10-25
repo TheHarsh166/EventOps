@@ -1,6 +1,7 @@
 import {
     createEventService,
     getPublishedEventsService,
+    getMyEventsService,
     getEventByIdService,
     updateEventService,
     publishEventService,
@@ -20,6 +21,21 @@ export const getEvents = async (req, res) => {
     } catch (error) {
         console.error(error);
 
+        return res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+};
+
+export const getMyEvents = async (req, res) => {
+    try {
+        const events = await getMyEventsService(req.user.id);
+        return res.status(200).json({
+            success: true,
+            events
+        });
+    } catch (error) {
+        console.error(error);
         return res.status(500).json({
             message: "Internal server error"
         });

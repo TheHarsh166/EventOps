@@ -32,7 +32,13 @@ export function LoginPage() {
     try {
       const res = await login(email, password);
       toast.success(`Welcome back, ${res.user?.name || "Attendee"}!`);
-      navigate(redirectPath);
+      if (searchParams.get("redirect")) {
+        navigate(searchParams.get("redirect"));
+      } else if (res.user?.role === "ORGANIZER") {
+        navigate("/organizer");
+      } else {
+        navigate("/app");
+      }
     } catch (err) {
       const msg = getErrorMessage(err, "Invalid email or password");
       setError(msg);

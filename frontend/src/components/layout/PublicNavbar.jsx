@@ -36,6 +36,13 @@ export function PublicNavbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
+                <Link to={user?.role === "ORGANIZER" ? "/organizer" : "/app"}>
+                  <Button variant="primary" size="sm" className="gap-1.5">
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    Dashboard
+                  </Button>
+                </Link>
+
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
                   <User className="w-3.5 h-3.5 text-indigo-600" />
                   <span>{user?.name}</span>

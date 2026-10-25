@@ -2,6 +2,7 @@ import express from "express";
 
 import {
     getEvents,
+    getMyEvents,
     getEventById,
     createEvent,
     updateEvent,
@@ -21,6 +22,14 @@ const router = express.Router();
 router.get(
     "/",
     getEvents
+);
+
+// Organizer's events (Placed BEFORE /:eventId so it doesn't get treated as an ID)
+router.get(
+    "/organizer/me",
+    authMiddleware,
+    authorizeRoles("ORGANIZER", "ADMIN"),
+    getMyEvents
 );
 
 router.get(
