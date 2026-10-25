@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --primary-light: #EEF2FF;
+    --ink: #111827;
+    --secondary-text: #64748B;
+    --app-bg: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --border: #E2E8F0;
+    --sidebar-bg: #111827;
+    --sidebar-text: #CBD5E1;
+    --success: #15803D;
+    --warning: #B45309;
+    --error: #DC2626;
+    --info: #2563EB;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--ink);
+    background-color: var(--app-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
