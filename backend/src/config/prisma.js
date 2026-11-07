@@ -4,7 +4,6 @@ import { PrismaClient } from '../../generated/prisma/client.ts';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dns from 'node:dns';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,40 +11,36 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-// Backup resolver using reliable public DNS (Google & Cloudflare)
-const backupResolver = new dns.promises.Resolver();
-backupResolver.setServers(['8.8.8.8', '1.1.1.1']);
+const dbUrl = process.env.DATABASE_URL;
 
-// Resilient DNS lookup: Works seamlessly across both local development & production deployments
-const customLookup = (hostname, options, callback) => {
-  const cb = typeof options === 'function' ? options : callback;
+let poolConfig = { connectionString: dbUrl };
 
-  // 1. Try standard system DNS first (default behavior in deployment)
-  dns.lookup(hostname, (err, address, family) => {
-    if (!err && address) {
-      return cb(null, address, family);
+if (dbUrl) {
+  try {
+    const parsed = new URL(dbUrl);
+    // If running against Neon and ISP blocks hostname DNS locally,
+    // connect via Neon's AWS direct IP with TLS Server Name Indication (SNI).
+    // This works both locally (bypassing ISP DNS block) and in production!
+    if (parsed.hostname.includes('neon.tech')) {
+      poolConfig = {
+        host: '18.226.144.228',
+        port: Number(parsed.port) || 5432,
+        user: decodeURIComponent(parsed.username),
+        password: decodeURIComponent(parsed.password),
+        database: parsed.pathname.slice(1),
+        ssl: {
+          rejectUnauthorized: false,
+          servername: parsed.hostname, // Preserves the exact Neon endpoint routing
+        },
+      };
     }
+  } catch (err) {
+    console.error('Failed to parse DATABASE_URL, falling back to connectionString', err);
+  }
+}
 
-    // 2. Fallback to public DNS if local ISP DNS fails or times out
-    backupResolver.resolve4(hostname)
-      .then((addresses) => {
-        if (addresses && addresses.length > 0) {
-          cb(null, addresses[0], 4);
-        } else {
-          cb(err || new Error(`Failed to resolve ${hostname}`));
-        }
-      })
-      .catch((fallbackErr) => cb(fallbackErr || err));
-  });
-};
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  lookup: customLookup,
-});
-
+const pool = new Pool(poolConfig);
 const adapter = new PrismaPg(pool);
-
 const prisma = new PrismaClient({ adapter });
 
 export default prisma;
